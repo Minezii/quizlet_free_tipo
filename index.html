@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>English Trainer 📚</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     СТРАНИЦА 1: ГЛАВНАЯ
+═══════════════════════════════════════════════════════════ -->
+<div id="page-home" class="page">
+
+  <div class="home-hero">
+    <div class="home-hero-inner">
+      <h1>📚 English Trainer</h1>
+      <p>Учите английские слова эффективно с карточками, тестами и адаптивным повторением</p>
+      <div class="home-hero-nav">
+        <button class="hero-nav-btn" onclick="renderProgress()">
+          📊 Мой прогресс
+        </button>
+        <button class="hero-nav-btn" onclick="openImportJSONModal()">
+          📥 Импорт JSON
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Создание списка -->
+    <div class="create-list-box">
+      <div class="input-group">
+        <label class="input-label" for="new-list-input">Новый список слов</label>
+        <input
+          type="text"
+          id="new-list-input"
+          class="text-input"
+          placeholder="Например: Тема — путешествия"
+          onkeydown="if(event.key==='Enter') createList()"
+          maxlength="80"
+        />
+      </div>
+      <button class="btn btn-primary" onclick="createList()">
+        + Создать
+      </button>
+    </div>
+
+    <!-- Список карточек -->
+    <div class="section-header">
+      <h2 class="section-title">Мои списки</h2>
+    </div>
+    <div id="lists-container"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     СТРАНИЦА 2: ДЕТАЛЬНАЯ СТРАНИЦА СПИСКА
+═══════════════════════════════════════════════════════════ -->
+<div id="page-list-detail" class="page">
+
+  <header class="app-header">
+    <button class="btn-back" onclick="backToHome()" title="Назад">←</button>
+    <span class="header-title" id="list-detail-title">Список слов</span>
+    <button class="header-nav-btn" onclick="showExportModal()" title="Экспорт в JSON">📤 Экспорт</button>
+    <button class="header-nav-btn" onclick="openBulkImport()">📋 Импорт</button>
+  </header>
+
+  <div class="container">
+    <!-- Форма добавления слова -->
+    <div class="add-word-box">
+      <div class="add-word-row">
+        <div class="input-group">
+          <label class="input-label" for="word-en-input">Английское</label>
+          <input
+            type="text"
+            id="word-en-input"
+            class="text-input"
+            placeholder="apple"
+            maxlength="100"
+          />
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="word-ru-input">Русский перевод</label>
+          <input
+            type="text"
+            id="word-ru-input"
+            class="text-input"
+            placeholder="яблоко"
+            maxlength="100"
+          />
+        </div>
+        <button class="btn btn-primary" onclick="addWordToList()">
+          + Добавить
+        </button>
+      </div>
+    </div>
+
+    <!-- Поиск и управление -->
+    <div class="list-controls">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input
+          type="text"
+          id="word-search"
+          class="search-input"
+          placeholder="Поиск слов..."
+          oninput="onSearchInput()"
+        />
+      </div>
+      <span id="words-count" class="badge">0 слов</span>
+    </div>
+
+    <!-- Таблица слов -->
+    <div class="words-table-wrap">
+      <table class="words-table">
+        <thead>
+          <tr>
+            <th>Английский</th>
+            <th>Перевод</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="words-table-body">
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Кнопки учиться -->
+    <div class="study-buttons">
+      <button id="btn-study" class="btn btn-primary btn-lg" onclick="openStudySelect(false)" disabled>
+        🎓 Учить слова
+      </button>
+      <button id="btn-random10" class="btn btn-accent btn-lg" onclick="openStudySelect(true)" disabled>
+        🎲 Случайные 10
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     СТРАНИЦА 3: ВЫБОР РЕЖИМА ОБУЧЕНИЯ
+═══════════════════════════════════════════════════════════ -->
+<div id="page-study-select" class="page">
+
+  <header class="app-header">
+    <button class="btn-back" onclick="backToList()" title="Назад">←</button>
+    <span class="header-title">Выберите режим</span>
+  </header>
+
+  <div class="study-select-wrap">
+    <h2 class="study-select-title" id="study-select-title">Название списка</h2>
+    <p class="study-select-sub" id="study-select-count">0 слов</p>
+
+    <div class="mode-cards">
+
+      <button class="mode-card" onclick="startFlashcards()">
+        <div class="mode-icon">🃏</div>
+        <div class="mode-info">
+          <h3>Карточки</h3>
+          <p>Переворачивайте карточки и оценивайте своё знание слов. Адаптивное повторение.</p>
+        </div>
+      </button>
+
+      <button class="mode-card" onclick="startTypeTest()">
+        <div class="mode-icon">⌨️</div>
+        <div class="mode-info">
+          <h3>Введите ответ</h3>
+          <p>Переводите слово с русского на английский, вводя ответ вручную.</p>
+        </div>
+      </button>
+
+      <button class="mode-card" onclick="startMultiChoice()">
+        <div class="mode-icon">✅</div>
+        <div class="mode-info">
+          <h3>Выберите ответ</h3>
+          <p>Выберите правильный перевод из 4 вариантов. Быстро и удобно.</p>
+        </div>
+      </button>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     СТРАНИЦА 4: КАРТОЧКИ (FLASHCARDS)
+═══════════════════════════════════════════════════════════ -->
+<div id="page-flashcards" class="page">
+
+  <header class="app-header">
+    <button class="btn-back" onclick="showPage('study-select')" title="Назад">←</button>
+    <span class="header-title">Карточки</span>
+    <span id="fc-progress-text" style="color:rgba(255,255,255,0.7);font-size:0.85rem;font-weight:600;">1 / 1</span>
+  </header>
+
+  <div class="study-layout">
+    <!-- Прогресс-бар -->
+    <div class="progress-row">
+      <div class="progress-track">
+        <div class="progress-fill" id="fc-progress-bar" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- Карточка -->
+    <div class="flashcard-scene" onclick="flipCard()">
+      <div class="flashcard" id="flashcard">
+        <!-- Лицевая сторона -->
+        <div class="fc-face fc-face-front">
+          <span class="fc-lang-tag">EN</span>
+          <p class="fc-word" id="fc-front-text">apple</p>
+          <p class="fc-hint" id="fc-front-sub">нажмите чтобы перевернуть</p>
+        </div>
+        <!-- Обратная сторона -->
+        <div class="fc-face fc-face-back">
+          <span class="fc-lang-tag ru">RU</span>
+          <p class="fc-word" id="fc-front-text-back" style="color:var(--primary)"></p>
+          <p class="fc-translation" id="fc-back-text">яблоко</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Кнопки ответа -->
+    <div class="fc-buttons hidden" id="fc-buttons">
+      <button class="btn btn-wrong btn-lg" onclick="fcAnswer(false)">
+        🔄 Повторить
+      </button>
+      <button class="btn btn-correct btn-lg" onclick="fcAnswer(true)">
+        ✓ Знаю
+      </button>
+    </div>
+
+    <p class="fc-hint-row">
+      Пробел / Enter — перевернуть &nbsp;·&nbsp; → Знаю &nbsp;·&nbsp; ← Повторить
+    </p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     СТРАНИЦА 5: ТЕСТ — ВВОД ОТВЕТА
+═══════════════════════════════════════════════════════════ -->
+<div id="page-type-test" class="page">
+
+  <header class="app-header">
+    <button class="btn-back" onclick="showPage('study-select')" title="Назад">←</button>
+    <span class="header-title">Введите перевод</span>
+    <span id="tt-progress-text" style="color:rgba(255,255,255,0.7);font-size:0.85rem;font-weight:600;">1 / 1</span>
+  </header>
+
+  <div class="study-layout">
+    <div class="progress-row">
+      <div class="progress-track">
+        <div class="progress-fill" id="tt-progress-bar" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="tt-card card-enter" id="tt-card">
+      <p class="tt-label">Переведите на английский:</p>
+      <p class="tt-question" id="tt-question">яблоко</p>
+
+      <div class="tt-input-row">
+        <input
+          type="text"
+          id="tt-input"
+          class="tt-answer-input"
+          placeholder="Ваш ответ..."
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+        />
+      </div>
+
+      <div class="tt-feedback" id="tt-feedback"></div>
+
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <button id="tt-btn-check" class="btn btn-primary btn-lg" onclick="checkTypeAnswer()">
+          Проверить
+        </button>
+        <button id="tt-btn-next" class="btn btn-secondary btn-lg" onclick="ttNextWord()" style="display:none">
+          Далее →
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     СТРАНИЦА 6: ТЕСТ — МНОЖЕСТВЕННЫЙ ВЫБОР
+═══════════════════════════════════════════════════════════ -->
+<div id="page-multi-choice" class="page">
+
+  <header class="app-header">
+    <button class="btn-back" onclick="showPage('study-select')" title="Назад">←</button>
+    <span class="header-title">Выберите ответ</span>
+    <span id="mc-progress-text" style="color:rgba(255,255,255,0.7);font-size:0.85rem;font-weight:600;">1 / 1</span>
+  </header>
+
+  <div class="study-layout">
+    <div class="progress-row">
+      <div class="progress-track">
+        <div class="progress-fill" id="mc-progress-bar" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="mc-card card-enter" id="mc-card">
+      <p class="tt-label">Выберите перевод слова:</p>
+      <p class="mc-question" id="mc-question">яблоко</p>
+      <p class="mc-label">Выберите правильный вариант</p>
+
+      <div class="mc-options" id="mc-options">
+        <!-- Варианты генерируются динамически -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     СТРАНИЦА 7: РЕЗУЛЬТАТ СЕССИИ
+═══════════════════════════════════════════════════════════ -->
+<div id="page-result" class="page">
+
+  <header class="app-header">
+    <span class="header-title">Результаты</span>
+  </header>
+
+  <div class="result-wrap">
+    <!-- Кольцо прогресса -->
+    <div class="result-ring">
+      <svg width="140" height="140" viewBox="0 0 124 124">
+        <circle class="ring-bg" cx="62" cy="62" r="54" />
+        <circle class="ring-fill" cx="62" cy="62" r="54" id="result-circle" />
+      </svg>
+      <div class="result-ring-inner">
+        <div class="result-pct-big" id="result-pct">0%</div>
+        <div class="result-emoji-sm" id="result-emoji">🎉</div>
+      </div>
+    </div>
+
+    <h2 class="result-title" id="result-msg">Отличный результат!</h2>
+    <p class="result-sub">Сессия завершена</p>
+
+    <!-- Статистика -->
+    <div class="result-stats">
+      <div class="result-stat">
+        <span class="result-stat-val c" id="result-correct">0</span>
+        <span class="result-stat-label">Правильно</span>
+      </div>
+      <div class="result-stat">
+        <span class="result-stat-val w" id="result-wrong">0</span>
+        <span class="result-stat-label">Ошибок</span>
+      </div>
+    </div>
+
+    <!-- Кнопки -->
+    <div class="result-buttons">
+      <button class="btn btn-primary btn-lg" onclick="startFlashcards()">
+        🔁 Повторить
+      </button>
+      <button class="btn btn-secondary btn-lg" onclick="backToList()">
+        ← К списку
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     СТРАНИЦА 8: ПРОГРЕСС
+═══════════════════════════════════════════════════════════ -->
+<div id="page-progress" class="page">
+
+  <header class="app-header">
+    <button class="btn-back" onclick="backToHome()" title="Назад">←</button>
+    <span class="header-title">Мой прогресс</span>
+  </header>
+
+  <div class="progress-wrap">
+
+    <!-- Общая статистика -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-val" id="prog-total-words">0</span>
+        <span class="stat-label">Всего слов</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val" id="prog-studied">0</span>
+        <span class="stat-label">Изучено</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val" style="color:var(--correct)" id="prog-correct">0</span>
+        <span class="stat-label">Верно</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val" style="color:var(--wrong)" id="prog-wrong">0</span>
+        <span class="stat-label">Ошибок</span>
+      </div>
+    </div>
+
+    <!-- Общий прогресс -->
+    <div class="overall-bar-wrap">
+      <div class="overall-bar-label">
+        <span>Общий результат</span>
+        <strong id="prog-pct">0%</strong>
+      </div>
+      <div class="overall-bar-track">
+        <div class="overall-bar-fill" id="prog-bar-fill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- Сложные слова -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <span class="section-card-title">😤 Сложные слова</span>
+        <button id="btn-repeat-hard" class="btn btn-accent btn-sm" disabled>
+          🔁 Повторить ошибки
+        </button>
+      </div>
+      <div class="section-card-body">
+        <div id="hard-words-list"></div>
+      </div>
+    </div>
+
+    <!-- Статистика по спискам -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <span class="section-card-title">📋 По спискам</span>
+      </div>
+      <div class="section-card-body">
+        <div id="prog-lists-stats"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     МОДАЛЬНЫЕ ОКНА
+═══════════════════════════════════════════════════════════ -->
+
+<!-- Подтверждение удаления -->
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal-box">
+    <p class="modal-title">⚠️ Подтверждение</p>
+    <p class="modal-message" id="confirm-message"></p>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="closeModal('modal-confirm')">Отмена</button>
+      <button class="btn btn-danger" id="confirm-ok">Удалить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Переименование -->
+<div class="modal-overlay" id="modal-prompt">
+  <div class="modal-box">
+    <p class="modal-title" id="prompt-title">Переименовать</p>
+    <div class="modal-input">
+      <input type="text" id="prompt-input" class="text-input" maxlength="80" />
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="closeModal('modal-prompt')">Отмена</button>
+      <button class="btn btn-primary" id="prompt-ok">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Редактирование слова -->
+<div class="modal-overlay" id="modal-edit-word">
+  <div class="modal-box">
+    <p class="modal-title">✏️ Редактировать слово</p>
+    <div class="modal-input">
+      <label class="input-label">Английский</label>
+      <input type="text" id="edit-en-input" class="text-input" style="margin-bottom:12px" maxlength="100" />
+      <label class="input-label">Русский перевод</label>
+      <input type="text" id="edit-ru-input" class="text-input" maxlength="100" />
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="closeModal('modal-edit-word')">Отмена</button>
+      <button class="btn btn-primary" id="edit-word-ok">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Массовый импорт -->
+<div class="modal-overlay" id="modal-bulk">
+  <div class="modal-box">
+    <p class="modal-title">📋 Импорт списка слов</p>
+    <p class="modal-message">Вставьте слова в формате: <code>english - перевод</code> (по одному на строку)</p>
+    <textarea
+      id="bulk-textarea"
+      class="bulk-textarea"
+      placeholder="apple - яблоко&#10;run - бежать&#10;improve - улучшать&#10;beautiful - красивый"
+    ></textarea>
+    <p class="bulk-hint">Разделители: &nbsp;-&nbsp; / &nbsp;—&nbsp; / &nbsp;|&nbsp; / &nbsp;,&nbsp;</p>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="closeModal('modal-bulk')">Отмена</button>
+      <button class="btn btn-primary" onclick="doBulkImport()">Импортировать</button>
+    </div>
+  </div>
+</div>
+
+<!-- Экспорт JSON -->
+<div class="modal-overlay" id="modal-export">
+  <div class="modal-box modal-wide">
+    <p class="modal-title" id="export-title">📤 Экспорт списка</p>
+    <p class="modal-message">
+      Скачайте файл или скопируйте JSON, чтобы поделиться списком с другими студентами.
+      <br><span class="share-count-badge" id="export-count"></span>
+    </p>
+
+    <textarea
+      id="export-textarea"
+      class="share-textarea"
+      readonly
+      onclick="this.select()"
+      spellcheck="false"
+    ></textarea>
+
+    <div class="share-actions">
+      <button class="btn btn-primary" id="export-download-btn">
+        ⬇️ Скачать .json
+      </button>
+      <button class="btn btn-secondary" onclick="copyExportJSON()">
+        📋 Копировать
+      </button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-export')">
+        Закрыть
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Импорт JSON -->
+<div class="modal-overlay" id="modal-import">
+  <div class="modal-box modal-wide">
+    <p class="modal-title">📥 Импорт списка из JSON</p>
+    <p class="modal-message">
+      Вставьте JSON-текст или выберите файл, полученный от другого студента.
+    </p>
+
+    <label class="file-drop-zone" id="file-drop-zone" onclick="document.getElementById('import-file-input').click()">
+      <input
+        type="file"
+        id="import-file-input"
+        accept=".json,application/json"
+        style="display:none"
+        onchange="onImportFileChange(this)"
+      />
+      <span class="file-drop-icon">📂</span>
+      <span class="file-drop-text">Нажмите чтобы выбрать .json файл</span>
+    </label>
+
+    <div class="share-divider"><span>или вставьте JSON вручную</span></div>
+
+    <textarea
+      id="import-textarea"
+      class="share-textarea"
+      placeholder='{"version":1,"title":"Мой список","words":[{"english":"apple","russian":"яблоко"}]}'
+      spellcheck="false"
+    ></textarea>
+
+    <p class="import-error" id="import-error"></p>
+
+    <div class="share-actions">
+      <button class="btn btn-primary" onclick="doImportJSON()">
+        ✅ Импортировать
+      </button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-import')">
+        Отмена
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Toast ─────────────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<!-- ─── Скрипты ───────────────────────────────────────────── -->
+<script src="database.js"></script>
+<script src="script.js"></script>
+
+<!-- Синхронизация front-text на обеих сторонах карточки -->
+<script>
+  // Показываем слово на задней стороне карточки тоже (при перевороте)
+  const origRender = window.renderFlashcard;
+  window.renderFlashcard = function() {
+    origRender();
+    const frontText = document.getElementById('fc-front-text');
+    const backRef = document.getElementById('fc-front-text-back');
+    if (frontText && backRef) {
+      backRef.textContent = frontText.textContent;
+    }
+  };
+</script>
+
+</body>
+</html>
