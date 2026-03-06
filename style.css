@@ -459,13 +459,15 @@ h1, h2, h3 {
 .progress-fill { height: 100%; background: var(--primary-light); border-radius: 2px; transition: width 0.4s var(--ease); }
 .progress-text { font-size: 0.8rem; font-weight: 600; color: var(--text-3); min-width: 42px; text-align: right; font-variant-numeric: tabular-nums; }
 
-.flashcard-scene { perspective: 900px; margin-bottom: 22px; cursor: pointer; }
+.flashcard-scene { perspective: 1000px; -webkit-perspective: 1000px; margin-bottom: 22px; cursor: pointer; }
 .flashcard {
   position: relative; width: 100%; height: 295px;
   transform-style: preserve-3d;
-  transition: transform 0.48s cubic-bezier(0.35, 0.1, 0.25, 1);
+  -webkit-transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.35, 0.1, 0.25, 1);
+  -webkit-transition: -webkit-transform 0.5s cubic-bezier(0.35, 0.1, 0.25, 1);
 }
-.flashcard.flipped { transform: rotateY(180deg); }
+.flashcard.flipped { transform: rotateY(180deg); -webkit-transform: rotateY(180deg); }
 
 .fc-face {
   position: absolute; inset: 0;
@@ -475,6 +477,10 @@ h1, h2, h3 {
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   padding: 28px; overflow: hidden;
+  /* iOS Safari: force GPU layer per face */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  will-change: transform;
 }
 .fc-face-front {
   background: var(--surface);
@@ -491,7 +497,8 @@ h1, h2, h3 {
   pointer-events: none;
 }
 .fc-face-back {
-  transform: rotateY(180deg);
+  -webkit-transform: rotateY(180deg) translateZ(0);
+  transform: rotateY(180deg) translateZ(0);
   background: var(--primary);
   box-shadow: var(--shadow-lg);
 }
@@ -813,6 +820,8 @@ circle { fill: none; stroke-width: 7; stroke-linecap: round; transition: stroke-
   .add-word-row { flex-direction: column; }
   .add-word-row .input-group { width: 100%; }
   .create-list-box { flex-direction: column; }
+  .create-list-box .input-group { width: 100%; }
+  .create-list-box .btn { width: 100%; justify-content: center; }
 }
 
 @media (min-width: 769px) { .bottom-nav { display: none !important; } }
