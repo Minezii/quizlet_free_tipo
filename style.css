@@ -404,8 +404,9 @@ h1, h2, h3 {
 .word-row { transition: background var(--t); }
 .word-row:hover { background: var(--bg); }
 .word-en { font-weight: 600; color: var(--primary); font-size: 0.9rem; }
-.word-ru { color: var(--text-2); font-size: 0.9rem; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
-.word-actions { width: 72px; text-align: right; }
+.word-ru { color: var(--text-2); font-size: 0.9rem; }
+.word-ru-inner { display: inline-flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.word-actions { width: 72px; text-align: right; white-space: nowrap; vertical-align: middle; }
 .table-empty { text-align: center; color: var(--text-3); padding: 8px; }
 
 .progress-badge {

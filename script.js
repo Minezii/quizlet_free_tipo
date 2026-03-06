@@ -174,7 +174,7 @@ async function renderListDetail() {
     return `
       <tr class="word-row">
         <td class="word-en">${escapeHtml(word.english)}</td>
-        <td class="word-ru">${escapeHtml(word.russian)} ${badgeHtml}</td>
+        <td class="word-ru"><span class="word-ru-inner">${escapeHtml(word.russian)} ${badgeHtml}</span></td>
         <td class="word-actions">
           <button class="btn-icon" onclick="editWord(${word.id}, '${escapeHtml(word.english)}', '${escapeHtml(word.russian)}')" title="Редактировать">✏️</button>
           <button class="btn-icon btn-delete" onclick="confirmDeleteWord(${word.id}, '${escapeHtml(word.english)}')" title="Удалить">🗑️</button>
