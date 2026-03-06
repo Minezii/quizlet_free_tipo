@@ -1,14 +1,7 @@
-/**
- * database.js — IndexedDB управление данными
- * База: english_trainer_db
- * Хранилища: word_lists, words, progress
- */
-
 const DB_NAME = 'english_trainer_db';
 const DB_VERSION = 1;
 let db;
 
-/** Инициализация базы данных */
 function initDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -23,7 +16,6 @@ function initDB() {
     request.onupgradeneeded = (event) => {
       const database = event.target.result;
 
-      // Хранилище списков слов
       if (!database.objectStoreNames.contains('word_lists')) {
         const listStore = database.createObjectStore('word_lists', {
           keyPath: 'id',
@@ -32,7 +24,6 @@ function initDB() {
         listStore.createIndex('created_at', 'created_at', { unique: false });
       }
 
-      // Хранилище слов
       if (!database.objectStoreNames.contains('words')) {
         const wordStore = database.createObjectStore('words', {
           keyPath: 'id',
@@ -41,15 +32,12 @@ function initDB() {
         wordStore.createIndex('list_id', 'list_id', { unique: false });
       }
 
-      // Хранилище прогресса
       if (!database.objectStoreNames.contains('progress')) {
         database.createObjectStore('progress', { keyPath: 'word_id' });
       }
     };
   });
 }
-
-// ─── Word Lists ────────────────────────────────────────────────────────────
 
 function createWordList(title) {
   return new Promise((resolve, reject) => {
@@ -111,8 +99,6 @@ function updateWordList(id, title) {
   });
 }
 
-// ─── Words ─────────────────────────────────────────────────────────────────
-
 function addWord(listId, english, russian) {
   return new Promise((resolve, reject) => {
     const tx = db.transaction('words', 'readwrite');
@@ -171,8 +157,6 @@ async function deleteWord(id) {
     req.onerror = () => reject(req.error);
   });
 }
-
-// ─── Progress ──────────────────────────────────────────────────────────────
 
 function getProgress(wordId) {
   return new Promise((resolve, reject) => {

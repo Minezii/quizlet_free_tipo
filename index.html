@@ -1,8 +1,12 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="light">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" id="meta-theme-color" content="#2D3A8C" />
   <title>English Trainer 📚</title>
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -15,14 +19,13 @@
 
   <div class="home-hero">
     <div class="home-hero-inner">
-      <h1>📚 English Trainer</h1>
-      <p>Учите английские слова эффективно с карточками, тестами и адаптивным повторением</p>
+      <h1>English Trainer</h1>
       <div class="home-hero-nav">
         <button class="hero-nav-btn" onclick="renderProgress()">
-          📊 Мой прогресс
+          Прогресс
         </button>
         <button class="hero-nav-btn" onclick="openImportJSONModal()">
-          📥 Импорт JSON
+          Импорт JSON
         </button>
       </div>
     </div>
@@ -63,7 +66,7 @@
   <header class="app-header">
     <button class="btn-back" onclick="backToHome()" title="Назад">←</button>
     <span class="header-title" id="list-detail-title">Список слов</span>
-    <button class="header-nav-btn" onclick="showExportModal()" title="Экспорт в JSON">📤 Экспорт</button>
+    <button class="header-nav-btn" onclick="showExportModal()" title="Экспорт в JSON">📤 Поделиться</button>
     <button class="header-nav-btn" onclick="openBulkImport()">📋 Импорт</button>
   </header>
 
@@ -232,6 +235,9 @@
 
     <p class="fc-hint-row">
       Пробел / Enter — перевернуть &nbsp;·&nbsp; → Знаю &nbsp;·&nbsp; ← Повторить
+    </p>
+    <p class="swipe-hint">
+      👆 Нажмите чтобы перевернуть &nbsp;·&nbsp; свайп → знаю &nbsp;·&nbsp; ← повторить
     </p>
   </div>
 </div>
@@ -501,31 +507,52 @@
 <!-- Экспорт JSON -->
 <div class="modal-overlay" id="modal-export">
   <div class="modal-box modal-wide">
-    <p class="modal-title" id="export-title">📤 Экспорт списка</p>
+    <p class="modal-title" id="export-title">📤 Поделиться списком</p>
     <p class="modal-message">
-      Скачайте файл или скопируйте JSON, чтобы поделиться списком с другими студентами.
+      Скачайте файл, скопируйте JSON или поделитесь ссылкой.
       <br><span class="share-count-badge" id="export-count"></span>
     </p>
 
-    <textarea
-      id="export-textarea"
-      class="share-textarea"
-      readonly
-      onclick="this.select()"
-      spellcheck="false"
-    ></textarea>
-
-    <div class="share-actions">
-      <button class="btn btn-primary" id="export-download-btn">
-        ⬇️ Скачать .json
-      </button>
-      <button class="btn btn-secondary" onclick="copyExportJSON()">
-        📋 Копировать
-      </button>
-      <button class="btn btn-secondary" onclick="closeModal('modal-export')">
-        Закрыть
-      </button>
+    <!-- Tabs -->
+    <div class="share-tabs">
+      <button class="share-tab active" onclick="switchShareTab('link', this)">🔗 Ссылка</button>
+      <button class="share-tab" onclick="switchShareTab('json', this)">{ } JSON</button>
+      <button class="share-tab" onclick="switchShareTab('file', this)">⬇️ Файл</button>
     </div>
+
+    <!-- Tab: Link -->
+    <div class="share-panel" id="share-panel-link">
+      <div class="share-link-box">
+        <input type="text" id="share-link-input" class="share-link-input" readonly onclick="this.select()" />
+        <button class="btn btn-primary" onclick="copyShareLink()">📋 Копировать</button>
+      </div>
+      <p class="share-link-hint">Отправьте эту ссылку студентам. Они откроют её в браузере и список импортируется автоматически.</p>
+    </div>
+
+    <!-- Tab: JSON text -->
+    <div class="share-panel hidden" id="share-panel-json">
+      <textarea id="export-textarea" class="share-textarea" readonly onclick="this.select()" spellcheck="false"></textarea>
+      <div class="share-actions">
+        <button class="btn btn-primary" onclick="copyExportJSON()">📋 Копировать JSON</button>
+        <button class="btn btn-secondary" onclick="closeModal('modal-export')">Закрыть</button>
+      </div>
+    </div>
+
+    <!-- Tab: Download file -->
+    <div class="share-panel hidden" id="share-panel-file">
+      <div class="file-download-preview">
+        <div class="file-icon">📄</div>
+        <div>
+          <p class="file-name-preview" id="export-file-name">list.json</p>
+          <p class="file-size-preview" id="export-file-size"></p>
+        </div>
+      </div>
+      <div class="share-actions">
+        <button class="btn btn-primary" id="export-download-btn">⬇️ Скачать .json</button>
+        <button class="btn btn-secondary" onclick="closeModal('modal-export')">Закрыть</button>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -574,23 +601,57 @@
 <!-- ─── Toast ─────────────────────────────────────────────── -->
 <div class="toast" id="toast"></div>
 
+<button class="theme-fab" id="theme-btn" onclick="toggleTheme()" title="Сменить тему" aria-label="Сменить тему">
+  <span id="theme-fab-icon" class="theme-fab-icon-wrap">
+    <!-- Moon: shown in light mode -->
+    <svg id="icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" stroke="none">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>
+    </svg>
+    <!-- Sun: shown in dark mode -->
+    <svg id="icon-sun" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" stroke="none" style="display:none">
+      <circle cx="12" cy="12" r="4.5"/>
+      <g class="sun-rays">
+        <rect x="11" y="1" width="2" height="3.5" rx="1"/>
+        <rect x="11" y="19.5" width="2" height="3.5" rx="1"/>
+        <rect x="1" y="11" width="3.5" height="2" rx="1"/>
+        <rect x="19.5" y="11" width="3.5" height="2" rx="1"/>
+        <rect x="4.05" y="3.34" width="2" height="3.5" rx="1" transform="rotate(-45 5.05 5.09)"/>
+        <rect x="17.95" y="17.16" width="2" height="3.5" rx="1" transform="rotate(-45 18.95 18.91)"/>
+        <rect x="17.16" y="3.34" width="3.5" height="2" rx="1" transform="rotate(45 18.91 4.34)"/>
+        <rect x="3.34" y="17.16" width="3.5" height="2" rx="1" transform="rotate(45 5.09 18.16)"/>
+      </g>
+    </svg>
+  </span>
+</button>
+
+<nav class="bottom-nav" id="bottom-nav">
+  <button class="bnav-btn active" id="bnav-home" onclick="bottomNavTo('home')">
+    <span class="bnav-icon">⌂</span>
+    <span class="bnav-label">Главная</span>
+  </button>
+  <button class="bnav-btn" id="bnav-progress" onclick="bottomNavTo('progress')">
+    <span class="bnav-icon">◎</span>
+    <span class="bnav-label">Прогресс</span>
+  </button>
+  <button class="bnav-btn" id="bnav-import" onclick="openImportJSONModal()">
+    <span class="bnav-icon">↓</span>
+    <span class="bnav-label">Импорт</span>
+  </button>
+</nav>
+
 <!-- ─── Скрипты ───────────────────────────────────────────── -->
 <script src="database.js"></script>
 <script src="script.js"></script>
 
 <!-- Синхронизация front-text на обеих сторонах карточки -->
 <script>
-  // Показываем слово на задней стороне карточки тоже (при перевороте)
   const origRender = window.renderFlashcard;
   window.renderFlashcard = function() {
     origRender();
     const frontText = document.getElementById('fc-front-text');
     const backRef = document.getElementById('fc-front-text-back');
-    if (frontText && backRef) {
-      backRef.textContent = frontText.textContent;
-    }
+    if (frontText && backRef) backRef.textContent = frontText.textContent;
   };
 </script>
-
 </body>
 </html>

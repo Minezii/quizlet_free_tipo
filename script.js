@@ -1,29 +1,32 @@
-/**
- * script.js — Главная логика приложения English Trainer
- * SPA навигация, управление списками, режимы обучения, прогресс
- */
-
-// ─── Состояние приложения ──────────────────────────────────────────────────
 const AppState = {
-  currentListId: null,     // ID текущего открытого списка
-  currentListTitle: '',    // Название текущего списка
-  studyWords: [],          // Слова для текущей сессии
-  studyIndex: 0,           // Текущий индекс в учебном списке
-  studyMode: null,         // 'flashcards' | 'type-test' | 'multi-choice'
-  sessionCorrect: 0,       // Правильных ответов в сессии
-  sessionWrong: 0,         // Ошибок в сессии
-  isFlipped: false,        // Перевёрнута ли карточка
-  isRandom10: false,       // Режим "случайные 10 слов"
+  currentListId: null,
+  currentListTitle: '',
+  studyWords: [],
+  studyIndex: 0,
+  studyMode: null,
+  sessionCorrect: 0,
+  sessionWrong: 0,
+  isFlipped: false,
+  isRandom10: false,
 };
 
-// ─── Инициализация ─────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+  initTheme();
   await initDB();
+
+  const shared = getShareHashData();
+  if (shared) {
+    history.replaceState(null, '', window.location.pathname);
+    showPage('home');
+    await renderHome();
+    setTimeout(() => openImportFromShareData(shared), 400);
+    return;
+  }
+
   showPage('home');
   await renderHome();
 });
 
-// ─── Навигация (SPA) ───────────────────────────────────────────────────────
 function showPage(pageId) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const page = document.getElementById(`page-${pageId}`);
@@ -31,9 +34,27 @@ function showPage(pageId) {
     page.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+  syncBottomNav(pageId);
 }
 
-// ─── Домашняя страница ─────────────────────────────────────────────────────
+function syncBottomNav(pageId) {
+  const nav = document.getElementById('bottom-nav');
+  const fab = document.getElementById('theme-btn');
+  const studyPages = ['flashcards', 'type-test', 'multi-choice'];
+  const hide = studyPages.includes(pageId);
+  if (nav) nav.classList.toggle('hidden-nav', hide);
+  if (fab) fab.style.display = hide ? 'none' : '';
+
+  document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
+  if (pageId === 'home')     document.getElementById('bnav-home')?.classList.add('active');
+  if (pageId === 'progress') document.getElementById('bnav-progress')?.classList.add('active');
+}
+
+function bottomNavTo(page) {
+  if (page === 'home') { showPage('home'); renderHome(); }
+  if (page === 'progress') renderProgress();
+}
+
 async function renderHome() {
   const lists = await getWordLists();
   const container = document.getElementById('lists-container');
@@ -48,7 +69,6 @@ async function renderHome() {
     return;
   }
 
-  // Получаем количество слов для каждого списка
   const listsWithCounts = await Promise.all(
     lists.map(async (list) => {
       const words = await getWordsByListId(list.id);
@@ -110,7 +130,6 @@ async function openList(listId) {
   await renderListDetail();
 }
 
-// ─── Детальная страница списка ─────────────────────────────────────────────
 async function renderListDetail() {
   const searchVal = (document.getElementById('word-search')?.value || '').toLowerCase();
   const words = await getWordsByListId(AppState.currentListId);
@@ -141,7 +160,6 @@ async function renderListDetail() {
     return;
   }
 
-  // Загружаем прогресс для каждого слова
   const progressData = await Promise.all(filtered.map(w => getProgress(w.id)));
   const progressMap = {};
   progressData.forEach(p => { progressMap[p.word_id] = p; });
@@ -207,14 +225,12 @@ async function confirmDeleteWord(id, english) {
   });
 }
 
-// Поиск слов
 let searchTimeout;
 function onSearchInput() {
   clearTimeout(searchTimeout);
   searchTimeout = setTimeout(() => renderListDetail(), 200);
 }
 
-// ─── Выбор режима обучения ─────────────────────────────────────────────────
 async function openStudySelect(isRandom10 = false) {
   AppState.isRandom10 = isRandom10;
   let words = await getWordsByListId(AppState.currentListId);
@@ -235,13 +251,11 @@ async function openStudySelect(isRandom10 = false) {
   showPage('study-select');
 }
 
-// ─── Режим: Карточки (Flashcards) ──────────────────────────────────────────
 async function startFlashcards() {
   AppState.studyMode = 'flashcards';
   AppState.sessionCorrect = 0;
   AppState.sessionWrong = 0;
 
-  // Загружаем прогресс и строим взвешенный список
   const wordsWithProgress = await Promise.all(
     AppState.studyWords.map(async (w) => {
       const p = await getProgress(w.id);
@@ -256,12 +270,11 @@ async function startFlashcards() {
   renderFlashcard();
 }
 
-/** Адаптивный алгоритм — слова с ошибками повторяются чаще */
 function buildTrainingList(words) {
   const list = [];
   words.forEach(word => {
     let weight = 1 + Math.max(0, word.wrong - word.correct);
-    weight = Math.min(weight, 4); // Максимум 4 копии
+    weight = Math.min(weight, 4);
     for (let i = 0; i < weight; i++) list.push({ ...word });
   });
   return shuffle(list);
@@ -284,14 +297,12 @@ function renderFlashcard() {
   document.getElementById('fc-back-text').textContent = word.russian;
   document.getElementById('fc-front-sub').textContent = 'нажмите чтобы перевернуть';
 
-  // Сбросить переворот
   const card = document.getElementById('flashcard');
   card.classList.remove('flipped');
   document.getElementById('fc-buttons').classList.add('hidden');
 
-  // Анимация появления
   card.classList.remove('card-enter');
-  void card.offsetWidth; // reflow
+  void card.offsetWidth;
   card.classList.add('card-enter');
 }
 
@@ -314,7 +325,6 @@ async function fcAnswer(knew) {
     await updateProgress(word.id, p.correct, p.wrong + 1);
   }
 
-  // Анимация ухода карточки
   const card = document.getElementById('flashcard');
   card.classList.add(knew ? 'card-exit-right' : 'card-exit-left');
 
@@ -325,7 +335,6 @@ async function fcAnswer(knew) {
   }, 350);
 }
 
-// ─── Режим: Тест (ввод ответа) ─────────────────────────────────────────────
 async function startTypeTest() {
   AppState.studyMode = 'type-test';
   AppState.sessionCorrect = 0;
@@ -398,7 +407,6 @@ function ttNextWord() {
   renderTypeTest();
 }
 
-// Проверка с Enter
 document.addEventListener('keydown', (e) => {
   const page = document.querySelector('.page.active');
   if (!page) return;
@@ -431,7 +439,6 @@ function normalizeAnswer(str) {
   return str.replace(/[.,!?;:'"()\-]/g, '').trim();
 }
 
-// ─── Режим: Тест (множественный выбор) ─────────────────────────────────────
 async function startMultiChoice() {
   AppState.studyMode = 'multi-choice';
   AppState.sessionCorrect = 0;
@@ -439,8 +446,6 @@ async function startMultiChoice() {
   AppState.studyWords = shuffle([...AppState.studyWords]);
   AppState.studyIndex = 0;
 
-  // Для вариантов ответов нужен общий пул слов
-  // Загружаем все слова из базы для дистракторов
   const allWords = await getWordsByListId(AppState.currentListId);
   AppState.allWordsForDistractors = allWords;
 
@@ -462,7 +467,6 @@ function renderMultiChoice() {
   document.getElementById('mc-progress-bar').style.width = `${((idx + 1) / total) * 100}%`;
   document.getElementById('mc-question').textContent = word.russian;
 
-  // Генерируем 4 варианта ответа
   const options = generateOptions(word, AppState.allWordsForDistractors);
 
   const optionsContainer = document.getElementById('mc-options');
@@ -480,13 +484,11 @@ function renderMultiChoice() {
 
 function generateOptions(correctWord, allWords) {
   const correct = correctWord.english;
-  // Берём случайные слова-дистракторы
   const others = allWords
     .filter(w => w.english !== correct)
     .map(w => w.english);
 
   const distractors = shuffle(others).slice(0, 3);
-  // Если слов меньше 4 — добавляем заглушки
   while (distractors.length < 3) {
     distractors.push(`option${distractors.length + 1}`);
   }
@@ -494,7 +496,6 @@ function generateOptions(correctWord, allWords) {
 }
 
 async function checkMcAnswer(btn, selected, correct, wordId) {
-  // Блокируем все кнопки
   document.querySelectorAll('.mc-option').forEach(b => b.disabled = true);
 
   const isCorrect = selected.toLowerCase() === correct.toLowerCase();
@@ -507,7 +508,6 @@ async function checkMcAnswer(btn, selected, correct, wordId) {
   } else {
     AppState.sessionWrong++;
     btn.classList.add('wrong');
-    // Подсветить правильный ответ
     document.querySelectorAll('.mc-option').forEach(b => {
       if (b.textContent.trim() === correct) b.classList.add('correct');
     });
@@ -520,7 +520,6 @@ async function checkMcAnswer(btn, selected, correct, wordId) {
   }, 900);
 }
 
-// ─── Результат сессии ──────────────────────────────────────────────────────
 function showSessionResult(mode) {
   const total = AppState.sessionCorrect + AppState.sessionWrong;
   const pct = total > 0 ? Math.round((AppState.sessionCorrect / total) * 100) : 0;
@@ -529,7 +528,6 @@ function showSessionResult(mode) {
   document.getElementById('result-wrong').textContent = AppState.sessionWrong;
   document.getElementById('result-pct').textContent = `${pct}%`;
 
-  // Эмодзи по результату
   const emoji = pct >= 80 ? '🎉' : pct >= 50 ? '👍' : '💪';
   document.getElementById('result-emoji').textContent = emoji;
 
@@ -540,7 +538,6 @@ function showSessionResult(mode) {
     : 'Продолжайте практиковаться!';
   document.getElementById('result-msg').textContent = msg;
 
-  // Кольцо прогресса
   const circle = document.getElementById('result-circle');
   const circumference = 2 * Math.PI * 54;
   circle.style.strokeDasharray = circumference;
@@ -552,7 +549,6 @@ function showSessionResult(mode) {
   showPage('result');
 }
 
-// ─── Прогресс ──────────────────────────────────────────────────────────────
 async function renderProgress() {
   showPage('progress');
 
@@ -560,11 +556,9 @@ async function renderProgress() {
   const allProgress = await getAllProgress();
   const allLists = await getWordLists();
 
-  // Создаём карту прогресса
   const progressMap = {};
   allProgress.forEach(p => { progressMap[p.word_id] = p; });
 
-  // Считаем статистику
   let totalCorrect = 0, totalWrong = 0, studied = 0;
   allWords.forEach(w => {
     const p = progressMap[w.id];
@@ -584,10 +578,8 @@ async function renderProgress() {
   document.getElementById('prog-wrong').textContent = totalWrong;
   document.getElementById('prog-pct').textContent = `${pct}%`;
 
-  // Прогресс-бар
   document.getElementById('prog-bar-fill').style.width = `${pct}%`;
 
-  // Сложные слова (wrong > correct)
   const hardWords = allWords
     .map(w => ({ ...w, prog: progressMap[w.id] || { correct: 0, wrong: 0 } }))
     .filter(w => w.prog.wrong > w.prog.correct && w.prog.wrong > 0)
@@ -610,7 +602,6 @@ async function renderProgress() {
     document.getElementById('btn-repeat-hard').onclick = () => repeatHardWords(hardWords);
   }
 
-  // Статистика по спискам
   const listsContainer = document.getElementById('prog-lists-stats');
   const listsHtml = await Promise.all(allLists.map(async list => {
     const words = await getWordsByListId(list.id);
@@ -637,7 +628,6 @@ async function renderProgress() {
 async function repeatHardWords(hardWords) {
   if (!hardWords || hardWords.length === 0) return;
 
-  // Найти список первого сложного слова для контекста
   const firstWord = hardWords[0];
   AppState.currentListId = firstWord.list_id;
   const list = await getWordList(firstWord.list_id);
@@ -652,7 +642,6 @@ async function repeatHardWords(hardWords) {
   showPage('study-select');
 }
 
-// ─── Модальные окна ────────────────────────────────────────────────────────
 function showConfirm(message, onConfirm) {
   document.getElementById('confirm-message').innerHTML = message;
   document.getElementById('modal-confirm').classList.add('active');
@@ -692,14 +681,12 @@ function closeModal(id) {
   document.getElementById(id).classList.remove('active');
 }
 
-// Закрытие модалок по клику на оверлей
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('modal-overlay')) {
     e.target.classList.remove('active');
   }
 });
 
-// ─── Toast уведомления ─────────────────────────────────────────────────────
 let toastTimeout;
 function showToast(message, type = 'success') {
   const toast = document.getElementById('toast');
@@ -709,7 +696,6 @@ function showToast(message, type = 'success') {
   toastTimeout = setTimeout(() => toast.classList.remove('show'), 2500);
 }
 
-// ─── Утилиты ───────────────────────────────────────────────────────────────
 function shuffle(array) {
   const arr = [...array];
   for (let i = arr.length - 1; i > 0; i--) {
@@ -741,7 +727,6 @@ function shakeInput(input) {
   input.focus();
 }
 
-// Добавление слова по Enter
 document.addEventListener('keydown', (e) => {
   const page = document.querySelector('.page.active');
   if (!page || page.id !== 'page-list-detail') return;
@@ -766,7 +751,6 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Импорт слов из текста (bulk)
 function openBulkImport() {
   document.getElementById('bulk-textarea').value = '';
   document.getElementById('modal-bulk').classList.add('active');
@@ -796,7 +780,6 @@ async function doBulkImport() {
   showToast(`Добавлено ${count} ${pluralWords(count)}!`);
 }
 
-// Обратно к списку
 function backToList() {
   showPage('list-detail');
   renderListDetail();
@@ -807,12 +790,189 @@ function backToHome() {
   renderHome();
 }
 
-// ─── JSON Шеринг ───────────────────────────────────────────────────────────
+function initTheme() {
+  const saved = localStorage.getItem('theme') || 'light';
+  applyTheme(saved);
+}
 
-/**
- * Экспортировать список в JSON-файл.
- * Формат: { version, title, created_at, words: [{english, russian}] }
- */
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const fab = document.getElementById('theme-btn');
+  if (fab) {
+    // Clear the base animation first so it won't replay on class change
+    fab.style.animation = 'none';
+    void fab.offsetWidth;
+    fab.classList.remove('spinning');
+    void fab.offsetWidth;
+    fab.classList.add('spinning');
+    fab.addEventListener('animationend', () => {
+      fab.classList.remove('spinning');
+      fab.style.animation = '';
+    }, { once: true });
+  }
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('theme', theme);
+
+  const isDark = theme === 'dark';
+  const metaColor = isDark ? '#141210' : '#1C3D2E';
+
+  const moon = document.getElementById('icon-moon');
+  const sun  = document.getElementById('icon-sun');
+  if (moon) moon.style.display = isDark ? 'none' : 'block';
+  if (sun)  sun.style.display  = isDark ? 'block' : 'none';
+
+  const meta = document.getElementById('meta-theme-color');
+  if (meta) meta.content = metaColor;
+}
+
+function encodeSharePayload(payload) {
+  const json = JSON.stringify(payload);
+  return btoa(unescape(encodeURIComponent(json)));
+}
+
+function decodeSharePayload(b64) {
+  return JSON.parse(decodeURIComponent(escape(atob(b64))));
+}
+
+function getShareHashData() {
+  const hash = window.location.hash;
+  if (!hash.startsWith('#share=')) return null;
+  try {
+    return decodeSharePayload(hash.slice(7));
+  } catch {
+    return null;
+  }
+}
+
+async function buildShareLink(listId) {
+  const list  = await getWordList(listId);
+  const words = await getWordsByListId(listId);
+  const payload = {
+    version: 1,
+    app: 'english-trainer',
+    title: list.title,
+    words: words.map(w => ({ english: w.english, russian: w.russian })),
+  };
+  const encoded = encodeSharePayload(payload);
+  const base = 'https://minezii.github.io/quizlet_free_tipo/';
+  return `${base}#share=${encoded}`;
+}
+
+async function showExportModal(listId) {
+  const id    = listId || AppState.currentListId;
+  const list  = await getWordList(id);
+  const words = await getWordsByListId(id);
+
+  const payload = {
+    version: 1,
+    app: 'english-trainer',
+    title: list.title,
+    created_at: list.created_at,
+    words: words.map(w => ({ english: w.english, russian: w.russian })),
+  };
+  const json = JSON.stringify(payload, null, 2);
+
+  document.getElementById('export-title').textContent  = `📤 ${list.title}`;
+  document.getElementById('export-count').textContent  = `${words.length} ${pluralWords(words.length)}`;
+  document.getElementById('export-textarea').value     = json;
+
+  const link = await buildShareLink(id);
+  document.getElementById('share-link-input').value = link;
+
+  const filename = list.title.replace(/[^a-zа-яёA-ZА-ЯЁ0-9_\- ]/gi, '_').slice(0, 60) + '.json';
+  document.getElementById('export-file-name').textContent = filename;
+  document.getElementById('export-file-size').textContent = `${(new Blob([json]).size / 1024).toFixed(1)} KB · ${words.length} слов`;
+  document.getElementById('export-download-btn').onclick = () => exportListAsJSON(id);
+
+  switchShareTab('link', document.querySelector('.share-tab'));
+  document.getElementById('modal-export').classList.add('active');
+}
+
+function switchShareTab(name, btn) {
+  document.querySelectorAll('.share-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.share-panel').forEach(p => p.classList.add('hidden'));
+  if (btn) btn.classList.add('active');
+  document.getElementById(`share-panel-${name}`)?.classList.remove('hidden');
+}
+
+async function copyShareLink() {
+  const val = document.getElementById('share-link-input').value;
+  try {
+    await navigator.clipboard.writeText(val);
+    showToast('Ссылка скопирована! 🔗');
+  } catch {
+    document.getElementById('share-link-input').select();
+    document.execCommand('copy');
+    showToast('Ссылка скопирована!');
+  }
+}
+
+async function openImportFromShareData(payload) {
+  const validWords = (payload.words || []).filter(w => w.english && w.russian);
+  if (!validWords.length) { showToast('Ссылка не содержит слов', 'error'); return; }
+
+  showConfirm(
+    `Импортировать список «${escapeHtml(payload.title)}»?<br><small>${validWords.length} ${pluralWords(validWords.length)}</small>`,
+    async () => {
+      const newListId = await createWordList(payload.title || 'Импортированный список');
+      for (const w of validWords) await addWord(newListId, w.english, w.russian);
+      await renderHome();
+      showToast(`Импортировано ${validWords.length} ${pluralWords(validWords.length)}!`);
+    }
+  );
+  const btn = document.getElementById('confirm-ok');
+  btn.textContent = 'Импортировать';
+  btn.className = 'btn btn-primary';
+}
+
+(function initSwipe() {
+  let startX = 0, startY = 0, isDragging = false;
+
+  document.addEventListener('touchstart', (e) => {
+    const scene = e.target.closest('.flashcard-scene');
+    if (!scene) return;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    isDragging = true;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', (e) => {
+    if (!isDragging) return;
+    const dx = e.touches[0].clientX - startX;
+    const card = document.getElementById('flashcard');
+    if (!card || !AppState.isFlipped) return;
+    card.style.transform = `rotateY(180deg) translateX(${-dx * 0.3}px) rotate(${dx * 0.02}deg)`;
+  }, { passive: true });
+
+  document.addEventListener('touchend', (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    const card = document.getElementById('flashcard');
+
+    if (card) card.style.transform = '';
+
+    if (Math.abs(dy) > Math.abs(dx)) return;
+
+    const page = document.querySelector('.page.active');
+    if (!page || page.id !== 'page-flashcards') return;
+
+    if (Math.abs(dx) < 60) {
+      if (!AppState.isFlipped) flipCard();
+      return;
+    }
+
+    if (!AppState.isFlipped) return;
+    if (dx > 60)  fcAnswer(true);
+    if (dx < -60) fcAnswer(false);
+  }, { passive: true });
+})();
+
 async function exportListAsJSON(listId) {
   const list  = await getWordList(listId);
   const words = await getWordsByListId(listId);
@@ -839,51 +999,18 @@ async function exportListAsJSON(listId) {
   showToast(`Файл «${filename}» скачан`);
 }
 
-/**
- * Показать модальное окно экспорта со ссылкой на JSON-текст.
- * Позволяет скачать файл или скопировать JSON в буфер.
- */
-async function showExportModal(listId) {
-  const list  = await getWordList(listId || AppState.currentListId);
-  const words = await getWordsByListId(listId || AppState.currentListId);
-
-  const payload = {
-    version:    1,
-    app:        'english-trainer',
-    title:      list.title,
-    created_at: list.created_at,
-    words:      words.map(w => ({ english: w.english, russian: w.russian })),
-  };
-
-  const json = JSON.stringify(payload, null, 2);
-  document.getElementById('export-title').textContent  = `Экспорт: ${list.title}`;
-  document.getElementById('export-count').textContent  = `${words.length} ${pluralWords(words.length)}`;
-  document.getElementById('export-textarea').value     = json;
-  document.getElementById('modal-export').classList.add('active');
-
-  // Привязываем кнопку «Скачать файл»
-  document.getElementById('export-download-btn').onclick = () => exportListAsJSON(listId || AppState.currentListId);
-}
-
-/**
- * Скопировать JSON из модального окна в буфер обмена.
- */
 async function copyExportJSON() {
   const text = document.getElementById('export-textarea').value;
   try {
     await navigator.clipboard.writeText(text);
     showToast('JSON скопирован в буфер!');
   } catch {
-    // Fallback для браузеров без Clipboard API
     document.getElementById('export-textarea').select();
     document.execCommand('copy');
     showToast('JSON скопирован!');
   }
 }
 
-/**
- * Открыть модальное окно импорта JSON.
- */
 function openImportJSONModal() {
   document.getElementById('import-textarea').value = '';
   document.getElementById('import-file-input').value = '';
@@ -892,9 +1019,6 @@ function openImportJSONModal() {
   setTimeout(() => document.getElementById('import-textarea').focus(), 100);
 }
 
-/**
- * Загрузить JSON-файл через <input type="file"> и вставить в textarea.
- */
 function onImportFileChange(input) {
   const file = input.files[0];
   if (!file) return;
@@ -906,9 +1030,6 @@ function onImportFileChange(input) {
   reader.readAsText(file, 'utf-8');
 }
 
-/**
- * Выполнить импорт: распарсить JSON и создать новый список.
- */
 async function doImportJSON() {
   const text  = document.getElementById('import-textarea').value.trim();
   const errEl = document.getElementById('import-error');
@@ -927,7 +1048,6 @@ async function doImportJSON() {
     return;
   }
 
-  // Валидация структуры
   if (!payload.title || !Array.isArray(payload.words)) {
     errEl.textContent = '❌ Неверный формат. Ожидается { title, words: [{english, russian}] }';
     return;
@@ -939,7 +1059,6 @@ async function doImportJSON() {
     return;
   }
 
-  // Создать список и добавить слова
   const newTitle  = payload.title + (payload.title ? ' (импорт)' : 'Импортированный список');
   const newListId = await createWordList(newTitle);
   for (const w of validWords) {
